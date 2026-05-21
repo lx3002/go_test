@@ -1,0 +1,9 @@
+.claude/
+.qodo/
+
+go.mod
+go.sum
+
+.vscode/
+.qodo/
+
