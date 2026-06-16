@@ -2,61 +2,71 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 )
 
-type Hub struct {
-	rooms map[string]map[*Client]bool
-
-	// Registered clients.
-	clients map[*Client]bool
-
-	// Inbound messages from clients.
-	broadcast chan []byte
-
-	// Register requests from clients.
-	register chan *Client
-
-	// Unregister requests from clients.
-	unregister chan *Client
+// MessageContainer wraps the message bytes with the destination room
+type MessageContainer struct {
+	Room    string
+	Payload []byte
 }
 
-func newHub() *Hub {
+type Hub struct {
+	// Rooms map: roomName -> set of clients in that room
+	rooms      map[string]map[*Client]bool
+	broadcast  chan MessageContainer
+	register   chan *Client
+	unregister chan *Client
+	client    map[*Client] bool
+}
+
+func NewHub() *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte),
+		broadcast:  make(chan MessageContainer),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
 		rooms:      make(map[string]map[*Client]bool),
+		client :    make(map[*Client]bool),
 	}
 }
 
-func (h *Hub) run() {
+func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			h.clients[client] = true
+			
+			if h.rooms[client.room] == nil {
+				h.rooms[client.room] = make(map[*Client]bool)
+			}
+			h.rooms[client.room][client] = true
 
 		case client := <-h.unregister:
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
-				close(client.send)
-			}
-
-		case message := <-h.broadcast:
-			var msg Message
-			if err := json.Unmarshal(message, &msg); err != nil {
-				log.Printf("invalid broadcast payload: %v", err)
-				continue
-			}
-			saveMessage(msg.Username, msg.Content)
-
-			for client := range h.clients {
-				select {
-				case client.send <- message:
-				default:
+			if clients, ok := h.rooms[client.room]; ok {
+				if _, exists := clients[client]; exists {
+					delete(clients, client)
 					close(client.send)
-					delete(h.clients, client)
+					
+					if len(clients) == 0 {
+						delete(h.rooms, client.room)
+					}
+				}
+			}
+
+		case container := <-h.broadcast:
+			// Save to DB first
+			var msg Message
+			if err := json.Unmarshal(container.Payload, &msg); err == nil {
+				saveMessage(msg.Username, msg.Content) 
+			}
+
+			// Broadcast ONLY to clients in the specified room
+			if clients, ok := h.rooms[container.Room]; ok {
+				for client := range clients {
+					select {
+					case client.send <- container.Payload:
+					default:
+						close(client.send)
+						delete(clients, client)
+					}
 				}
 			}
 		}

@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"log"
+	
 	"net/http"
 	"strings"
 	"time"
@@ -38,7 +38,10 @@ type Client struct {
 	send chan []byte
 	// Username attached to messages sent by this client.
 	Username string
+	// create a room field to track which room the client is in
+	room   string
 }
+
 
 func (c *Client) readPump() {
 	defer func() {
@@ -57,9 +60,9 @@ func (c *Client) readPump() {
 		_, text, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("websocket read error: %v", err)
+				break
 			}
-			break
+			
 		}
 
 		content := strings.TrimSpace(string(text))
@@ -72,13 +75,14 @@ func (c *Client) readPump() {
 			Content:   content,
 			Timestamp: time.Now().UTC(),
 		}
-		msgBytes, err := json.Marshal(msg)
-		if err != nil {
-			log.Printf("couldn't marshal message: %v", err)
-			continue
-		}
+		msgBytes, _ := json.Marshal(msg)
+		
 
-		c.hub.broadcast <- msgBytes
+		// send the marshaled message to the hub's broadcast channel
+		c.hub.broadcast <- MessageContainer{
+			Room:    c.room,
+			Payload: msgBytes,
+		}
 	}
 }
 

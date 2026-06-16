@@ -3,14 +3,20 @@ package main
 import (
 	"database/sql"
 	"log"
-
+	"os"
+     _ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+	"github.com/joho/godotenv"
 )
 
 var db *sql.DB
 
+func init() {
+	godotenv.Load()
+}
+
 func initDB() {
-	connStr := getEnv("DATABASE_URL", "")
+	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
 		log.Println("DATABASE_URL is not set; message persistence is disabled")
 		return
@@ -32,7 +38,7 @@ func initDB() {
 
 	query := `
 	CREATE TABLE IF NOT EXISTS messages (
-		id SERIAL PRIMARY KEY,
+		id SERIAL PRIMARY KEY AUTO_INCREMENT,
 		username TEXT NOT NULL,
 		content TEXT NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -22,7 +22,7 @@ func CreateToken(username string) (string, error) {
 
 func VerifyToken(tokenString string) (string, error) {
 	if tokenString == "" {
-		return "", fmt.Errorf("missing token")
+		return "", fmt.Errorf("missing tokenstring cannot be null")
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {

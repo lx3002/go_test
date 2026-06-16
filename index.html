@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Go Chat</title>
     <style>
-        :root {
+         :root {
             color-scheme: light;
             --bg: #f5f7fb;
             --panel: #ffffff;
@@ -19,36 +19,34 @@
             --border: #d9e0ea;
             --shadow: 0 24px 60px rgba(28, 39, 60, 0.14);
         }
-
+        
         * {
             box-sizing: border-box;
         }
-
+        
         body {
             min-height: 100vh;
             margin: 0;
-            background:
-                radial-gradient(circle at top left, rgba(15, 139, 141, 0.14), transparent 32rem),
-                linear-gradient(135deg, #f8fafc 0%, var(--bg) 48%, #eef5f2 100%);
+            background: radial-gradient(circle at top left, rgba(15, 139, 141, 0.14), transparent 32rem), linear-gradient(135deg, #f8fafc 0%, var(--bg) 48%, #eef5f2 100%);
             color: var(--text);
             font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
-
+        
         button,
         input {
             font: inherit;
         }
-
+        
         .app {
             display: grid;
             min-height: 100vh;
             place-items: center;
             padding: 24px;
         }
-
+        
         .shell {
             display: grid;
-            grid-template-columns: minmax(240px, 0.8fr) minmax(320px, 1.4fr);
+            grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.3fr);
             width: min(1040px, 100%);
             min-height: min(720px, calc(100vh - 48px));
             overflow: hidden;
@@ -58,16 +56,16 @@
             box-shadow: var(--shadow);
             backdrop-filter: blur(18px);
         }
-
+        
         .sidebar {
             display: flex;
             flex-direction: column;
-            gap: 28px;
+            gap: 24px;
             padding: 32px;
             border-right: 1px solid var(--border);
             background: rgba(247, 250, 252, 0.8);
         }
-
+        
         .brand {
             display: flex;
             align-items: center;
@@ -75,7 +73,7 @@
             font-weight: 800;
             letter-spacing: 0;
         }
-
+        
         .brand-mark {
             display: grid;
             width: 42px;
@@ -86,21 +84,21 @@
             color: white;
             font-size: 20px;
         }
-
+        
         .intro h1 {
             margin: 0 0 12px;
             font-size: clamp(2rem, 4vw, 4.25rem);
             line-height: 0.95;
             letter-spacing: 0;
         }
-
+        
         .intro p {
             max-width: 28rem;
             margin: 0;
             color: var(--muted);
             line-height: 1.6;
         }
-
+        
         .status-panel {
             margin-top: auto;
             padding: 16px;
@@ -108,7 +106,7 @@
             border-radius: 16px;
             background: var(--panel);
         }
-
+        
         .status-row {
             display: flex;
             align-items: center;
@@ -117,7 +115,7 @@
             color: var(--muted);
             font-size: 0.92rem;
         }
-
+        
         .status-pill {
             display: inline-flex;
             align-items: center;
@@ -130,25 +128,25 @@
             color: var(--text);
             font-weight: 700;
         }
-
+        
         .status-dot {
             width: 9px;
             height: 9px;
             border-radius: 50%;
             background: var(--muted);
         }
-
+        
         .status-pill.connected .status-dot {
             background: #12b76a;
         }
-
+        
         .chat-panel {
             display: grid;
             grid-template-rows: auto 1fr auto;
             min-height: 0;
             background: var(--panel);
         }
-
+        
         .chat-header {
             display: flex;
             align-items: center;
@@ -157,16 +155,17 @@
             padding: 22px 24px;
             border-bottom: 1px solid var(--border);
         }
-
+        
         .chat-title {
             min-width: 0;
         }
-
+        
         .chat-title h2 {
             margin: 0;
             font-size: 1.05rem;
+            text-transform: capitalize;
         }
-
+        
         .chat-title p {
             margin: 4px 0 0;
             color: var(--muted);
@@ -175,18 +174,34 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-
-        .login-form,
+        /* Enforces form layout elements to always wrap correctly */
+        
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            margin-top: 24px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .form-group label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--muted);
+        }
+        
         .composer {
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            gap: 12px;
         }
-
-        .login-form {
-            width: min(100%, 420px);
-            margin-top: 28px;
-        }
-
+        
         input {
             width: 100%;
             min-width: 0;
@@ -198,13 +213,16 @@
             outline: none;
             transition: border-color 160ms ease, box-shadow 160ms ease;
         }
-
+        
         input:focus {
             border-color: var(--accent);
             box-shadow: 0 0 0 4px rgba(15, 139, 141, 0.14);
         }
-
+        
         button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             border: 0;
             border-radius: 12px;
             padding: 0 18px;
@@ -215,30 +233,30 @@
             font-weight: 800;
             transition: background 160ms ease, transform 160ms ease;
         }
-
+        
         button:hover {
             background: var(--accent-dark);
         }
-
+        
         button:active {
             transform: translateY(1px);
         }
-
+        
         button:disabled {
             cursor: not-allowed;
             opacity: 0.58;
         }
-
+        
         .ghost-button {
             border: 1px solid var(--border);
             background: white;
             color: var(--text);
         }
-
+        
         .ghost-button:hover {
             background: var(--panel-muted);
         }
-
+        
         .messages {
             display: flex;
             flex-direction: column;
@@ -246,11 +264,9 @@
             min-height: 0;
             overflow-y: auto;
             padding: 24px;
-            background:
-                linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)),
-                repeating-linear-gradient(0deg, transparent 0 31px, rgba(217, 224, 234, 0.45) 32px);
+            background: linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)), repeating-linear-gradient(0deg, transparent 0 31px, rgba(217, 224, 234, 0.45) 32px);
         }
-
+        
         .empty-state {
             margin: auto;
             max-width: 26rem;
@@ -258,7 +274,7 @@
             text-align: center;
             line-height: 1.6;
         }
-
+        
         .message {
             width: fit-content;
             max-width: min(78%, 640px);
@@ -268,13 +284,13 @@
             background: white;
             box-shadow: 0 8px 22px rgba(28, 39, 60, 0.08);
         }
-
+        
         .message.mine {
             align-self: flex-end;
             border-color: rgba(15, 139, 141, 0.25);
             background: #e9fbf8;
         }
-
+        
         .message-meta {
             display: flex;
             align-items: center;
@@ -284,75 +300,72 @@
             font-size: 0.78rem;
             font-weight: 700;
         }
-
+        
         .message-text {
             overflow-wrap: anywhere;
             line-height: 1.45;
         }
-
+        
         .composer-wrap {
             padding: 18px 24px 24px;
             border-top: 1px solid var(--border);
             background: white;
         }
-
+        
         .error {
             min-height: 20px;
-            margin: 10px 0 0;
+            margin: 6px 0 0;
             color: var(--danger);
             font-size: 0.9rem;
         }
-
+        
         .hidden {
             display: none;
         }
-
+        
+        @media (min-width: 781px) {
+            .composer {
+                flex-direction: row;
+            }
+            .composer input {
+                flex: 1;
+            }
+        }
+        
         @media (max-width: 780px) {
             .app {
                 padding: 0;
             }
-
             .shell {
                 grid-template-columns: 1fr;
                 min-height: 100vh;
                 border: 0;
                 border-radius: 0;
             }
-
             .sidebar {
                 gap: 18px;
                 padding: 22px;
                 border-right: 0;
                 border-bottom: 1px solid var(--border);
             }
-
             .intro h1 {
                 font-size: 2.35rem;
             }
-
             .intro p,
             .status-panel {
                 display: none;
             }
-
             .chat-panel {
                 min-height: 0;
             }
-
             .chat-header,
             .messages,
             .composer-wrap {
                 padding-left: 16px;
                 padding-right: 16px;
             }
-
             .message {
                 max-width: 88%;
-            }
-
-            .login-form,
-            .composer {
-                flex-direction: column;
             }
         }
     </style>
@@ -370,9 +383,19 @@
                 <div class="intro">
                     <h1>Fast room chat.</h1>
                     <p>Sign in with a display name and send realtime messages over a Go websocket server.</p>
+
                     <form class="login-form" id="login-form">
-                        <input id="username-input" name="username" type="text" placeholder="Your display name" autocomplete="name" maxlength="32" required>
-                        <button id="login-button" type="submit">Join</button>
+                        <div class="form-group">
+                            <label for="username-input">Display Name</label>
+                            <input id="username-input" name="username" type="text" placeholder="e.g., Alex" autocomplete="name" maxlength="32" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="room-input">Chat Room / Channel</label>
+                            <input id="room-input" name="room" type="text" placeholder="e.g., madden, lobby" maxlength="20" required>
+                        </div>
+
+                        <button id="login-button" type="submit">Join Room</button>
                     </form>
                     <p class="error" id="login-error" role="alert"></p>
                 </div>
@@ -388,7 +411,7 @@
             <section class="chat-panel" aria-label="Chat messages">
                 <header class="chat-header">
                     <div class="chat-title">
-                        <h2>Lobby</h2>
+                        <h2 id="room-title">Lobby</h2>
                         <p id="welcome">Join the room to start chatting.</p>
                     </div>
                     <button class="ghost-button hidden" id="leave-button" type="button">Leave</button>
@@ -413,10 +436,12 @@
         const loginForm = document.getElementById("login-form");
         const messageForm = document.getElementById("message-form");
         const usernameInput = document.getElementById("username-input");
+        const roomInput = document.getElementById("room-input");
         const messageInput = document.getElementById("message-input");
         const messages = document.getElementById("messages");
         const emptyState = document.getElementById("empty-state");
         const welcome = document.getElementById("welcome");
+        const roomTitle = document.getElementById("room-title");
         const statusPill = document.getElementById("status-pill");
         const statusText = document.getElementById("status-text");
         const loginError = document.getElementById("login-error");
@@ -427,25 +452,33 @@
 
         let socket;
         let myUsername = "";
+        let selectedRoom = "general";
 
-        loginForm.addEventListener("submit", async (event) => {
+        loginForm.addEventListener("submit", async(event) => {
             event.preventDefault();
             loginError.textContent = "";
             const username = usernameInput.value.trim();
+            selectedRoom = roomInput.value.trim().toLowerCase().replace(/[^a-z0-9-_]/g, "");
+
             if (!username) {
                 loginError.textContent = "Enter a display name.";
                 return;
             }
+            if (!selectedRoom) {
+                loginError.textContent = "Enter a valid room name.";
+                return;
+            }
 
             loginButton.disabled = true;
+            roomInput.disabled = true;
             setStatus("Connecting", false);
 
             try {
-                const body = new URLSearchParams({ username });
-                const response = await fetch("/login", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body,
+                const params = new URLSearchParams({
+                    username
+                });
+                const response = await fetch(`/login?${params.toString()}`, {
+                    method: "GET"
                 });
 
                 if (!response.ok) {
@@ -454,11 +487,12 @@
 
                 const data = await response.json();
                 myUsername = data.username;
-                connect(data.token);
+                connect(data.token, selectedRoom);
             } catch (error) {
                 loginError.textContent = "Could not join. Check the server and try again.";
                 setStatus("Offline", false);
                 loginButton.disabled = false;
+                roomInput.disabled = false;
             }
         });
 
@@ -480,19 +514,27 @@
             resetChat();
         });
 
-        function connect(token) {
+        function connect(token, room) {
             const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-            socket = new WebSocket(`${protocol}://${window.location.host}/ws?token=${encodeURIComponent(token)}`);
+            socket = new WebSocket(`${protocol}://${window.location.host}/ws?token=${token}&room=${room}`);
 
             socket.addEventListener("open", () => {
                 welcome.textContent = `Chatting as ${myUsername}`;
+                roomTitle.textContent = room;
+
                 usernameInput.disabled = true;
                 loginButton.disabled = true;
+                roomInput.disabled = true;
                 messageInput.disabled = false;
                 sendButton.disabled = false;
                 leaveButton.classList.remove("hidden");
                 setStatus("Online", true);
                 messageInput.focus();
+
+                const msgArticles = messages.querySelectorAll("article");
+                msgArticles.forEach(el => el.remove());
+
+                emptyState.classList.remove("hidden");
                 emptyState.textContent = "No messages yet. Start the conversation.";
             });
 
@@ -500,7 +542,11 @@
                 try {
                     appendMessage(JSON.parse(event.data));
                 } catch {
-                    appendMessage({ username: "Server", content: event.data, timestamp: new Date().toISOString() });
+                    appendMessage({
+                        username: "Server",
+                        content: event.data,
+                        timestamp: new Date().toISOString()
+                    });
                 }
             });
 
@@ -536,10 +582,12 @@
             myUsername = "";
             usernameInput.disabled = false;
             loginButton.disabled = false;
+            roomInput.disabled = false;
             messageInput.disabled = true;
             sendButton.disabled = true;
             leaveButton.classList.add("hidden");
             welcome.textContent = "Join the room to start chatting.";
+            roomTitle.textContent = "Lobby";
             setStatus("Offline", false);
             if (clearNotice) {
                 chatError.textContent = "";
@@ -553,7 +601,10 @@
 
         function formatTime(value) {
             const date = value ? new Date(value) : new Date();
-            return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(date);
+            return new Intl.DateTimeFormat(undefined, {
+                hour: "2-digit",
+                minute: "2-digit"
+            }).format(date);
         }
     </script>
 </body>
