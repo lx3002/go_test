@@ -2,7 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	
+	"html"
+
 	"net/http"
 	"strings"
 	"time"
@@ -11,15 +12,28 @@ import (
 )
 
 const (
-	// Time allowed to write a message to the peer.
+	
 	writeWait = 10 * time.Second
-	// Time allowed to read the next pong message from the peer.
+	
 	pongWait = 60 * time.Second
-	// Send pings to peer with this period. Must be less than pongWait.
+	
 	pingPeriod = (pongWait * 9) / 10
-	// Maximum message size allowed from a browser client.
+	
 	maxMessageSize = 1024
 )
+var ratelimitBucket = make(chan struct {}, 5)
+
+func init(){
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		for range ticker.C{
+			select{
+			case ratelimitBucket <- struct{}{}:
+			default:
+			}
+		}
+	}()
+}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -32,7 +46,7 @@ var upgrader = websocket.Upgrader{
 
 type Client struct {
 	hub *Hub
-	// The websocket connection.
+	
 	conn *websocket.Conn
 	// Buffered channel of outbound messages.
 	send chan []byte
@@ -52,7 +66,7 @@ func (c *Client) readPump() {
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error {
-		c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
 
@@ -64,6 +78,13 @@ func (c *Client) readPump() {
 			}
 			
 		}
+		select{
+		case <- ratelimitBucket:
+		default:
+			continue
+		}
+
+		safeContent := html.EscapeString(string(text))
 
 		content := strings.TrimSpace(string(text))
 		if content == "" {
@@ -74,6 +95,9 @@ func (c *Client) readPump() {
 			Username:  c.Username,
 			Content:   content,
 			Timestamp: time.Now().UTC(),
+			Type: "room",
+			target: c.room,
+			medmediatype: "text",
 		}
 		msgBytes, _ := json.Marshal(msg)
 		
