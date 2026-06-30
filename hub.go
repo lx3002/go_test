@@ -11,12 +11,13 @@ type MessageContainer struct {
 }
 
 type Hub struct {
-	// Rooms map: roomName -> set of clients in that room
+	
 	rooms      map[string]map[*Client]bool
 	broadcast  chan MessageContainer
 	register   chan *Client
 	unregister chan *Client
 	client    map[*Client] bool
+	users    map[string]*Client
 }
 
 func NewHub() *Hub {
@@ -26,6 +27,7 @@ func NewHub() *Hub {
 		unregister: make(chan *Client),
 		rooms:      make(map[string]map[*Client]bool),
 		client :    make(map[*Client]bool),
+		users:      make(map[string]*Client),
 	}
 }
 
@@ -38,6 +40,7 @@ func (h *Hub) Run() {
 				h.rooms[client.room] = make(map[*Client]bool)
 			}
 			h.rooms[client.room][client] = true
+			h.users[client.Username] = client
 
 		case client := <-h.unregister:
 			if clients, ok := h.rooms[client.room]; ok {
@@ -50,9 +53,10 @@ func (h *Hub) Run() {
 					}
 				}
 			}
+			delete(h.users, client.Username)
 
 		case container := <-h.broadcast:
-			// Save to DB first
+			
 			var msg Message
 			if err := json.Unmarshal(container.Payload, &msg); err == nil {
 				saveMessage(msg.Username, msg.Content) 

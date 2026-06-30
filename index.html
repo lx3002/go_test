@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Go Chat</title>
+    <title>Go Chat - Pro Edition</title>
     <style>
          :root {
             color-scheme: light;
@@ -174,7 +174,6 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        /* Enforces form layout elements to always wrap correctly */
         
         .login-form {
             display: flex;
@@ -198,8 +197,9 @@
         
         .composer {
             display: flex;
-            flex-direction: column;
-            gap: 12px;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
         }
         
         input {
@@ -306,6 +306,13 @@
             line-height: 1.45;
         }
         
+        .media-content {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
         .composer-wrap {
             padding: 18px 24px 24px;
             border-top: 1px solid var(--border);
@@ -323,13 +330,15 @@
             display: none;
         }
         
-        @media (min-width: 781px) {
-            .composer {
-                flex-direction: row;
-            }
-            .composer input {
-                flex: 1;
-            }
+        .attach-btn {
+            background: var(--panel-muted);
+            color: var(--text);
+            font-size: 1.25rem;
+            padding: 0 14px;
+        }
+        
+        .attach-btn:hover {
+            background: var(--border);
         }
         
         @media (max-width: 780px) {
@@ -423,6 +432,9 @@
 
                 <div class="composer-wrap">
                     <form class="composer" id="message-form">
+                        <input type="file" id="media-input" accept="image/*,video/*" class="hidden" onchange="uploadMedia(this)">
+                        <button type="button" class="attach-btn" id="attach-button" onclick="document.getElementById('media-input').click()" disabled>📎</button>
+
                         <input id="message-input" type="text" placeholder="Type a message..." maxlength="1000" disabled>
                         <button id="send-button" type="submit" disabled>Send</button>
                     </form>
@@ -449,6 +461,7 @@
         const loginButton = document.getElementById("login-button");
         const sendButton = document.getElementById("send-button");
         const leaveButton = document.getElementById("leave-button");
+        const attachButton = document.getElementById("attach-button");
 
         let socket;
         let myUsername = "";
@@ -502,10 +515,56 @@
             if (!text || !socket || socket.readyState !== WebSocket.OPEN) {
                 return;
             }
-            socket.send(text);
+
+            // Structured messaging wrapper
+            const payload = {
+                type: "room",
+                target: selectedRoom,
+                content: text,
+                media_type: "text"
+            };
+
+            socket.send(JSON.stringify(payload));
             messageInput.value = "";
             messageInput.focus();
         });
+
+        // AJAX Multi-part Media Uploader Pipeline
+        async function uploadMedia(inputElement) {
+            if (!inputElement.files || inputElement.files.length === 0) return;
+            chatError.textContent = "";
+
+            const file = inputElement.files[0];
+            const formData = new FormData();
+            formData.append("media", file);
+
+            try {
+                attachButton.disabled = true;
+                const response = await fetch("/upload", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error(await response.text());
+
+                const fileURL = await response.text();
+                const typeFlag = file.type.startsWith("video/") ? "video" : "image";
+
+                // Broadcast file asset reference directly over socket channels
+                const payload = {
+                    type: "room",
+                    target: selectedRoom,
+                    content: fileURL,
+                    media_type: typeFlag
+                };
+                socket.send(JSON.stringify(payload));
+            } catch (err) {
+                chatError.textContent = "Upload failed: " + err.message;
+            } finally {
+                attachButton.disabled = false;
+                inputElement.value = ""; // Flush value to allow re-selection
+            }
+        }
 
         leaveButton.addEventListener("click", () => {
             if (socket) {
@@ -527,6 +586,7 @@
                 roomInput.disabled = true;
                 messageInput.disabled = false;
                 sendButton.disabled = false;
+                attachButton.disabled = false;
                 leaveButton.classList.remove("hidden");
                 setStatus("Online", true);
                 messageInput.focus();
@@ -542,9 +602,11 @@
                 try {
                     appendMessage(JSON.parse(event.data));
                 } catch {
+                    // Fallback configuration processing
                     appendMessage({
                         username: "Server",
                         content: event.data,
+                        media_type: "text",
                         timestamp: new Date().toISOString()
                     });
                 }
@@ -569,11 +631,28 @@
             meta.className = "message-meta";
             meta.textContent = `${message.username || "Guest"} • ${formatTime(message.timestamp)}`;
 
-            const text = document.createElement("div");
-            text.className = "message-text";
-            text.textContent = message.content || "";
+            const textContainer = document.createElement("div");
+            textContainer.className = "message-text";
 
-            messageEl.append(meta, text);
+            // Evaluates platform rendering strategies based on protocol flags
+            if (message.media_type === "image") {
+                const img = document.createElement("img");
+                img.src = message.content;
+                img.className = "media-content";
+                img.onload = () => messages.scrollTop = messages.scrollHeight;
+                textContainer.appendChild(img);
+            } else if (message.media_type === "video") {
+                const video = document.createElement("video");
+                video.src = message.content;
+                video.controls = true;
+                video.className = "media-content";
+                video.onloadeddata = () => messages.scrollTop = messages.scrollHeight;
+                textContainer.appendChild(video);
+            } else {
+                textContainer.textContent = message.content || "";
+            }
+
+            messageEl.append(meta, textContainer);
             messages.appendChild(messageEl);
             messages.scrollTop = messages.scrollHeight;
         }
@@ -585,6 +664,7 @@
             roomInput.disabled = false;
             messageInput.disabled = true;
             sendButton.disabled = true;
+            attachButton.disabled = true;
             leaveButton.classList.add("hidden");
             welcome.textContent = "Join the room to start chatting.";
             roomTitle.textContent = "Lobby";

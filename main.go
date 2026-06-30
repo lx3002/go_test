@@ -111,6 +111,10 @@ func main() {
 		serveWs(hub, w, r)
 	})
 
+	http.HandleFunc("./upload", HandleMediaUpload)
+	file_server := http.FileServer(http.Dir("./upolads"))
+	http.Handle("/static/uploads", http.StripPrefix("/static/uploads", file_server))
+
 	const port = ":8080"
 	log.Printf("Chat server started on http://localhost%s\n", port)
 
