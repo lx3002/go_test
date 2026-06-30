@@ -14,7 +14,7 @@ const MaxUpload_size = 20*1024*1024
 const UploadDirectory = "./uploads"
 
 
-func HandleMediaUpload(w http.ResponseWriter, r http.Request){
+func HandleMediaUpload(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if r.Method != http.MethodPost{
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -66,7 +66,7 @@ func HandleMediaUpload(w http.ResponseWriter, r http.Request){
 		return
 	}
 
-	file_url := fmt.Sprintf("/static/upload/%S", safeFilename)
+	file_url := fmt.Sprintf("/static/upload/%s", safeFilename)
 	w.Header().Set("Content-type", "text/plain")
 	w.Write([]byte(file_url))
 }
