@@ -9,5 +9,6 @@ type Message struct {
 	target    string     `json:"target"`
     content   string     `json:"content"`
 	mediatype string      `json:"media_type"`
+	Type      string        `json:"type"`
 	
 }

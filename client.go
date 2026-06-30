@@ -93,11 +93,11 @@ func (c *Client) readPump() {
 
 		msg := Message{
 			Username:  c.Username,
-			Content:   content,
+			Content:   safeContent,
 			Timestamp: time.Now().UTC(),
 			Type: "room",
 			target: c.room,
-			medmediatype: "text",
+			mediatype: "text",
 		}
 		msgBytes, _ := json.Marshal(msg)
 		
