@@ -4,8 +4,7 @@
 go.mod
 go.sum
 
-.codex
-.agents
+
 
 .vscode/
 .qodo/
