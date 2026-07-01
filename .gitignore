@@ -4,8 +4,16 @@
 go.mod
 go.sum
 
+.codex
+.agents
+
 .vscode/
 .qodo/
 .env
 ai.txt
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+README.mod
+babel.config.js
 
