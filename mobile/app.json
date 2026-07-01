@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Go Chat",
+    "slug": "go-chat",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "gochat",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {}
+  }
+}

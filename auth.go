@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -42,6 +44,14 @@ func VerifyToken(tokenString string) (string, error) {
 	}
 
 	return "", fmt.Errorf("invalid token")
+}
+
+func tokenFromRequest(r *http.Request) string {
+	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+	if len(authHeader) > 7 && strings.EqualFold(authHeader[:7], "Bearer ") {
+		return strings.TrimSpace(authHeader[7:])
+	}
+	return strings.TrimSpace(r.URL.Query().Get("token"))
 }
 
 func getEnv(key, fallback string) string {

@@ -2,9 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"html"
-
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -12,22 +11,21 @@ import (
 )
 
 const (
-	
 	writeWait = 10 * time.Second
-	
-	pongWait = 60 * time.Second
-	
-	pingPeriod = (pongWait * 9) / 10
-	
-	maxMessageSize = 1024
-)
-var ratelimitBucket = make(chan struct {}, 5)
+	pongWait  = 60 * time.Second
 
-func init(){
+	pingPeriod = (pongWait * 9) / 10
+
+	maxMessageSize = 32 * 1024
+)
+
+var ratelimitBucket = make(chan struct{}, 20)
+
+func init() {
 	go func() {
 		ticker := time.NewTicker(time.Second)
-		for range ticker.C{
-			select{
+		for range ticker.C {
+			select {
 			case ratelimitBucket <- struct{}{}:
 			default:
 			}
@@ -40,22 +38,35 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
 		origin := r.Header.Get("Origin")
-		return origin == "" || strings.Contains(origin, r.Host)
+		if origin == "" || getEnv("ALLOW_ANY_ORIGIN", "") == "1" {
+			return true
+		}
+		originURL, err := url.Parse(origin)
+		return err == nil && strings.EqualFold(originURL.Host, r.Host)
 	},
 }
 
 type Client struct {
-	hub *Hub
-	
+	hub  *Hub
 	conn *websocket.Conn
+
 	// Buffered channel of outbound messages.
 	send chan []byte
+
 	// Username attached to messages sent by this client.
 	Username string
-	// create a room field to track which room the client is in
-	room   string
+	UserKey  string
+	roomName string
+	roomKey  string
+	private  bool
 }
 
+type clientPayload struct {
+	Type      string `json:"type"`
+	Target    string `json:"target"`
+	Content   string `json:"content"`
+	MediaType string `json:"media_type"`
+}
 
 func (c *Client) readPump() {
 	defer func() {
@@ -66,48 +77,93 @@ func (c *Client) readPump() {
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error {
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		c.conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
 
 	for {
-		_, text, err := c.conn.ReadMessage()
+		_, payload, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				break
 			}
-			
+			break
 		}
-		select{
-		case <- ratelimitBucket:
+		select {
+		case <-ratelimitBucket:
 		default:
 			continue
 		}
 
-		safeContent := html.EscapeString(string(text))
-
-		content := strings.TrimSpace(string(text))
-		if content == "" {
+		msg, ok := c.parseMessage(payload)
+		if !ok {
+			continue
+		}
+		msgBytes, err := json.Marshal(msg)
+		if err != nil {
 			continue
 		}
 
-		msg := Message{
-			Username:  c.Username,
-			Content:   safeContent,
-			Timestamp: time.Now().UTC(),
-			Type: "room",
-			target: c.room,
-			mediatype: "text",
+		if msg.Type == "dm" {
+			c.hub.direct <- DirectMessage{
+				Recipient: msg.Target,
+				Payload:   msgBytes,
+				Message:   msg,
+				Sender:    c,
+			}
+			continue
 		}
-		msgBytes, _ := json.Marshal(msg)
-		
 
-		// send the marshaled message to the hub's broadcast channel
 		c.hub.broadcast <- MessageContainer{
-			Room:    c.room,
+			Room:    c.roomKey,
 			Payload: msgBytes,
+			Message: msg,
 		}
 	}
+}
+
+func (c *Client) parseMessage(raw []byte) (Message, bool) {
+	var incoming clientPayload
+	if err := json.Unmarshal(raw, &incoming); err != nil {
+		incoming = clientPayload{
+			Type:      roomMessageType(c.private),
+			Target:    c.roomName,
+			Content:   string(raw),
+			MediaType: "text",
+		}
+	}
+
+	mediaType := strings.ToLower(strings.TrimSpace(incoming.MediaType))
+	if mediaType != "image" && mediaType != "video" {
+		mediaType = "text"
+	}
+
+	content := strings.TrimSpace(incoming.Content)
+	if content == "" {
+		return Message{}, false
+	}
+
+	msgType := strings.ToLower(strings.TrimSpace(incoming.Type))
+	msg := Message{
+		Username:  c.Username,
+		Content:   content,
+		Timestamp: time.Now().UTC(),
+		MediaType: mediaType,
+	}
+
+	if msgType == "dm" || msgType == "direct" {
+		target := strings.TrimSpace(incoming.Target)
+		if target == "" {
+			return Message{}, false
+		}
+		msg.Type = "dm"
+		msg.Target = target
+		return msg, true
+	}
+
+	msg.Type = roomMessageType(c.private)
+	msg.Target = c.roomName
+	return msg, true
 }
 
 func (c *Client) writePump() {
